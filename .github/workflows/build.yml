@@ -12,8 +12,6 @@ jobs:
           B=https://raw.githubusercontent.com/itdoginfo/allow-domains/main
           { curl -sf $B/Russia/inside-raw.lst | grep -v '^\.'
             for n in telegram meta discord twitter; do curl -sf $B/Subnets/IPv4/$n.lst; echo; done
-            # AmneziaDNS resolver: private Docker IP on the VPN server, routes DNS via tunnel
-            echo 172.29.172.254/32
           } | grep -v '^\s*$' | awk '!s[$0]++' > list.txt
           [ "$(wc -l < list.txt)" -gt 1000 ] || { echo "list too short"; exit 1; }
       - run: |
