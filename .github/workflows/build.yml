@@ -2,19 +2,42 @@ name: build
 on:
   schedule: [{cron: "0 4 * * *"}]
   workflow_dispatch:
+  push:
+    paths: [extra.txt, exclude.txt, .github/workflows/**]
 permissions: {contents: write}
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
+      - name: build list
+        run: |
+          set -euo pipefail
           B=https://raw.githubusercontent.com/itdoginfo/allow-domains/main
-          { curl -sf $B/Russia/inside-raw.lst | grep -v '^\.'
-            for n in telegram meta discord twitter; do curl -sf $B/Subnets/IPv4/$n.lst; echo; done
-          } | grep -v '^\s*$' | awk '!s[$0]++' > list.txt
+          F=https://raw.githubusercontent.com/Flowseal/zapret-discord-youtube/main/lists
+          fetch() { curl -sfL --retry 3 "$1" || { echo "fetch failed: $1" >&2; exit 1; }; }
+          clean() { tr -d '\r' | sed 's/#.*//; s/[[:space:]]//g' | grep -v '^$' || true; }
+
+          { fetch $F/list-general.txt; fetch $F/list-google.txt; cat exclude.txt 2>/dev/null || true; } \
+            | clean | sed 's/^\^//; s/^\.//' | sort -u > zapret.txt
+
+          { fetch $B/Russia/inside-raw.lst | grep -v '^\.' || true
+            for n in telegram meta twitter; do fetch $B/Subnets/IPv4/$n.lst; echo; done
+            cat extra.txt 2>/dev/null || true
+          } | clean > raw.txt
+
+          awk 'NR==FNR { ex[$0]=1; next }
+               /^[0-9.]+(\/[0-9]+)?$/ { if (!seen[$0]++) print; next }
+               { d=$0; skip=0
+                 while (1) { if (d in ex) { skip=1; break }
+                             i=index(d,"."); if (!i) break; d=substr(d,i+1) }
+                 if (!skip && !seen[$0]++) print }' zapret.txt raw.txt > list.txt
+
+          echo "zapret domains: $(wc -l < zapret.txt), final list: $(wc -l < list.txt)"
           [ "$(wc -l < list.txt)" -gt 1000 ] || { echo "list too short"; exit 1; }
-      - run: |
+          rm -f zapret.txt raw.txt
+      - name: commit
+        run: |
           git config user.name bot
           git config user.email bot@users.noreply.github.com
           git add list.txt
