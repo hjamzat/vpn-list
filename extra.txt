@@ -1,2 +1,8 @@
 4.207.247.0/24
 31.129.110.0/24
+fbcdn.net
+facebook.com
+facebook.net
+fb.com
+fbsbx.com
+57.144.0.0/14
