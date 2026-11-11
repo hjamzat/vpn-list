@@ -18,7 +18,7 @@ jobs:
           fetch() { curl -sfL --retry 3 "$1" || { echo "fetch failed: $1" >&2; exit 1; }; }
           clean() { tr -d '\r' | sed 's/#.*//; s/[[:space:]]//g' | grep -v '^$' || true; }
 
-          { fetch $F/list-general.txt; fetch $F/list-google.txt; cat exclude.txt 2>/dev/null || true; } \
+          { fetch $F/list-general.txt; cat exclude.txt 2>/dev/null || true; } \
             | clean | sed 's/^\^//; s/^\.//' | sort -u > zapret.txt
 
           { fetch $B/Russia/inside-raw.lst | grep -v '^\.' || true
